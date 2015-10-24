@@ -9,26 +9,7 @@
 #import "QuickLocalization.h"
 #import "RCXcode.h"
 
-static NSString *localizeRegexs[] = {
-    @"NSLocalizedString\\s*\\(\\s*@\"(.*)\"\\s*,\\s*(.*)\\s*\\)",
-    @"localizedStringForKey:\\s*@\"(.*)\"\\s*value:\\s*(.*)\\s*table:\\s*(.*)",
-    @"NSLocalizedStringFromTable\\s*\\(\\s*@\"(.*)\"\\s*,\\s*(.*)\\s*,\\s*(.*)\\s*\\)",
-    @"NSLocalizedStringFromTableInBundle\\s*\\(\\s*@\"(.*)\"\\s*,\\s*(.*)\\s*,\\s*(.*)\\s*,\\s*(.*)\\s*\\)",
-    @"NSLocalizedStringWithDefaultValue\\s*\\(\\s*@\"(.*)\"\\s*,\\s*(.*)\\s*,\\s*(.*)\\s*,\\s*(.*)\\s*,\\s*(.*)\\s*\\)"
-};
-
-static NSString *objcStringRegexs = @"@([\"'])(?:(?=(\\\\?))\\2.)*?\\1";
-static NSString *swiftStringRegexs = @"([\"'])(?:(?=(\\\\?))\\2.)*?\\1";
-
-static NSString * const QLShouldUseNilForComment = @"QLShouldUseNilForComment";
-static NSString * const QLShouldUseSnippetForComment = @"QLShouldUseSnippetForComment";
-static NSString * const QLShouldUseSwiftSyntax = @"QLShouldUseSwiftSyntax";
-
 @interface QuickLocalization ()
-
-@property (nonatomic, assign) BOOL shouldUseNilForComment;
-@property (nonatomic, assign) BOOL shouldUseSnippetForComment;
-@property (nonatomic, assign) BOOL shouldUseSwiftSyntax;
 
 @end
 
@@ -37,186 +18,113 @@ static NSString * const QLShouldUseSwiftSyntax = @"QLShouldUseSwiftSyntax";
 static id sharedPlugin = nil;
 
 
-+ (void)pluginDidLoad:(NSBundle *)plugin {
++ (void)pluginDidLoad:(NSBundle *)plugin
+{
     static dispatch_once_t onceToken;
+
     dispatch_once(&onceToken, ^{
         sharedPlugin = [[self alloc] init];
     });
 }
 
-- (id)init {
-    if (self = [super init]) {
+- (id)init
+{
+    if (self = [super init])
+    {
         [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+            
             NSMenuItem *viewMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
-            if (viewMenuItem) {
+
+            if (viewMenuItem)
+            {
                 [[viewMenuItem submenu] addItem:[NSMenuItem separatorItem]];
 
-                NSMenuItem *localization = [[NSMenuItem alloc] initWithTitle:@"Quick Localization" action:@selector(quickLocalization) keyEquivalent:@"d"];
-                [localization setKeyEquivalentModifierMask:NSShiftKeyMask | NSAlternateKeyMask];
-                [localization setTarget:self];
-
-                NSMenuItem *nilToggle = [[NSMenuItem alloc] initWithTitle:@"Use nil for NSLocalizedString comment" action:@selector(toggleNilOption) keyEquivalent:@""];
-                [nilToggle setTarget:self];
-
-                NSMenuItem *snippetToggle = [[NSMenuItem alloc] initWithTitle:@"Use <# comments #> for NSLocalizedString comment" action:@selector(toggleSnippetOption) keyEquivalent:@""];
-                [snippetToggle setTarget:self];
-
-                NSMenuItem *swiftSyntax = [[NSMenuItem alloc] initWithTitle:@"Swift Localization" action:@selector(toggleSwiftOption) keyEquivalent:@""];
-                [swiftSyntax setTarget:self];
-
-                NSMenu *groupMenu = [[NSMenu alloc] initWithTitle:@"Quick Localization"];
-                [groupMenu addItem:localization];
-                [groupMenu addItem:nilToggle];
-                [groupMenu addItem:snippetToggle];
-                [groupMenu addItem:swiftSyntax];
-
-                NSMenuItem *groupMenuItem = [[NSMenuItem alloc] initWithTitle:@"Quick Localization" action:NULL keyEquivalent:@""];
-                [[viewMenuItem submenu] addItem:groupMenuItem];
-                [[viewMenuItem submenu] setSubmenu:groupMenu forItem:groupMenuItem];
+                NSMenuItem *dotNotationMenuItem = [[NSMenuItem alloc] initWithTitle:@"Convert To Dot Notation" action:@selector(convertToDotNotation) keyEquivalent:@"x"];
+                [dotNotationMenuItem setKeyEquivalentModifierMask:NSShiftKeyMask | NSCommandKeyMask];
+                [dotNotationMenuItem setTarget:self];
+                [[viewMenuItem submenu] addItem:dotNotationMenuItem];
             }
         }];
     }
+
     return self;
 }
 
 // Sample Action, for menu item:
-- (void)quickLocalization {
+- (void)convertToDotNotation
+{
     IDESourceCodeDocument *document = [RCXcode currentSourceCodeDocument];
     NSTextView *textView = [RCXcode currentSourceCodeTextView];
+
     if (!document || !textView) {
         return;
     }
-    
-    //    NSLog(@"file: %@", [RCXcode currentWorkspaceDocument].workspace.representingFilePath.fileURL.absoluteString);
+
     NSArray *selectedRanges = [textView selectedRanges];
-    if ([selectedRanges count] > 0) {
-        NSRange range = [[selectedRanges objectAtIndex:0] rangeValue];
+    if (selectedRanges.count > 0)
+    {
+        NSRange range = [[selectedRanges firstObject] rangeValue];
         NSRange lineRange = [textView.textStorage.string lineRangeForRange:range];
         NSString *line = [textView.textStorage.string substringWithRange:lineRange];
+
+        NSString *dotNotationRegex = @".*[.].*[ ]{0,}=[ ]{0,}.*[ ]{0,}\\;";
+        NSString *messageNotationRegex = @"\\[[ ]{0,}(.*)\\sset(.*)[ ]{0,}\\:[ ]{0,}(.*)\\]\\;";
         
-        NSRegularExpression *localizedRex = [[NSRegularExpression alloc] initWithPattern:localizeRegexs[0] options:NSRegularExpressionCaseInsensitive error:nil];
-        NSArray *localizedMatches = [localizedRex matchesInString:line options:0 range:NSMakeRange(0, [line length])];
+        NSRegularExpression *dotNotationRex = [[NSRegularExpression alloc] initWithPattern:dotNotationRegex options:NSRegularExpressionCaseInsensitive error:nil];
+        NSArray *dotNotationMatches = [dotNotationRex matchesInString:line options:0 range:NSMakeRange(0, line.length)];
+
+        NSRegularExpression *MsgNotationRegex = [[NSRegularExpression alloc] initWithPattern:messageNotationRegex options:NSRegularExpressionCaseInsensitive error:nil];
+        NSArray *msgNotationMatches = [MsgNotationRegex matchesInString:line options:0 range:NSMakeRange(0, line.length)];
         
-        NSRegularExpression *regex = [[NSRegularExpression alloc] initWithPattern:[self currentStringRegexs] options:NSRegularExpressionCaseInsensitive error:nil];
-        NSArray *matches = [regex matchesInString:line options:0 range:NSMakeRange(0, [line length])];
-        NSUInteger addedLength = 0;
-        for (int i = 0; i < [matches count]; i++) {
-            NSTextCheckingResult *result = [matches objectAtIndex:i];
+        NSInteger addedLength = 0;
+        
+        for (NSTextCheckingResult *result in msgNotationMatches)
+        {
             NSRange matchedRangeInLine = result.range;
             NSRange matchedRangeInDocument = NSMakeRange(lineRange.location + matchedRangeInLine.location + addedLength, matchedRangeInLine.length);
-            if ([self isRange:matchedRangeInLine inSkipedRanges:localizedMatches]) {
+            NSString *string = [line substringWithRange:matchedRangeInLine];
+            
+            NSString *receiver = [line substringWithRange:[result rangeAtIndex:1]];
+            NSString *property = [line substringWithRange:[result rangeAtIndex:2]];
+            NSString *newValue = [line substringWithRange:[result rangeAtIndex:3]];
+            
+            if ([self isRange:matchedRangeInLine inSkipedRanges:dotNotationMatches]) {
                 continue;
             }
-            NSString *string = [line substringWithRange:matchedRangeInLine];
-//            NSLog(@"string index:%d, %@", i, string);
-            NSString *outputString;
             
-            NSString *swiftAddtion = self.shouldUseSwiftSyntax ? @"comment: " : @"";
-
-            if ([self shouldUseNilForComment]) {
-                if (self.shouldUseSwiftSyntax) {
-                    outputString = [NSString stringWithFormat:@"NSLocalizedString(%@, comment: \"\")", string];
-                }
-                else {
-                    outputString = [NSString stringWithFormat:@"NSLocalizedString(%@, nil)", string];
-                }
-            }
-            else if ([self shouldUseSnippetForComment]) {
-                outputString = [NSString stringWithFormat:@"NSLocalizedString(%@, %@<# comments #>)", string, swiftAddtion];
-            }
-            else {
-                outputString = [NSString stringWithFormat:@"NSLocalizedString(%@, %@%@)", string, swiftAddtion ,string];
-            }
-
+            NSString *lowerCasePropertyFirstLetter = [[[property substringToIndex:1] lowercaseString] stringByAppendingString:[property substringFromIndex:1]];
+            NSString *outputString = [NSString stringWithFormat:@"%@.%@ = %@;", receiver, lowerCasePropertyFirstLetter, newValue];
+            
             addedLength = addedLength + outputString.length - string.length;
-            if ([textView shouldChangeTextInRange:matchedRangeInDocument replacementString:outputString]) {
-                [textView.textStorage replaceCharactersInRange:matchedRangeInDocument
-                                          withAttributedString:[[NSAttributedString alloc] initWithString:outputString]];
+            
+            if ([textView shouldChangeTextInRange:matchedRangeInDocument replacementString:outputString])
+            {
+                [textView.textStorage replaceCharactersInRange:matchedRangeInDocument withAttributedString:[[NSAttributedString alloc] initWithString:outputString]];
                 [textView didChangeText];
             }
-            
-            //            [textView replaceCharactersInRange:matchedRangeInDocument withString:outputString];
-            //            NSAlert *alert = [NSAlert alertWithMessageText:outputString defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
-            //            [alert runModal];
         }
     }
 }
 
-- (NSString *)currentStringRegexs {
-    if (self.shouldUseSwiftSyntax) {
-        return swiftStringRegexs;
-    }
-    else {
-        return objcStringRegexs;
-    }
-}
-
-- (BOOL)isRange:(NSRange)range inSkipedRanges:(NSArray *)ranges {
-    for (int i = 0; i < [ranges count]; i++) {
+- (BOOL)isRange:(NSRange)range inSkipedRanges:(NSArray *)ranges
+{
+    for (int i = 0; i < [ranges count]; i++)
+    {
         NSTextCheckingResult *result = [ranges objectAtIndex:i];
         NSRange skippedRange = result.range;
-        if (skippedRange.location <= range.location && skippedRange.location + skippedRange.length > range.location + range.length) {
+
+        if (skippedRange.location <= range.location && skippedRange.location + skippedRange.length > range.location + range.length)
+        {
             return YES;
         }
     }
+
     return NO;
 }
 
-- (void)toggleNilOption {
-    self.shouldUseNilForComment = !self.shouldUseNilForComment;
-    
-    if (self.shouldUseNilForComment) {
-        self.shouldUseSnippetForComment = NO;
-    }
-}
-
-- (void)toggleSnippetOption {
-    self.shouldUseSnippetForComment = !self.shouldUseSnippetForComment;
-    if (self.shouldUseSnippetForComment) {
-        self.shouldUseNilForComment = NO;
-    }
-}
-
-- (void)toggleSwiftOption {
-    self.shouldUseSwiftSyntax = !self.shouldUseSwiftSyntax;
-}
-
-- (BOOL)validateMenuItem:(NSMenuItem *)menuItem {
-    if ([menuItem action] == @selector(toggleNilOption)) {
-        [menuItem setState:[self shouldUseNilForComment] ? NSOnState : NSOffState];
-    }
-    else if ([menuItem action] == @selector(toggleSnippetOption)) {
-        [menuItem setState:[self shouldUseSnippetForComment] ? NSOnState : NSOffState];
-    }
-    else if ([menuItem action] == @selector(toggleSwiftOption)) {
-        [menuItem setState:[self shouldUseSwiftSyntax] ? NSOnState : NSOffState];
-    }
+- (BOOL)validateMenuItem:(NSMenuItem *)menuItem
+{
     return YES;
 }
 
-#pragma mark Preferences
-
-- (BOOL)shouldUseNilForComment {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:QLShouldUseNilForComment];
-}
-
-- (void)setShouldUseNilForComment:(BOOL)shouldUseNilForComment {
-    [[NSUserDefaults standardUserDefaults] setBool:shouldUseNilForComment forKey:QLShouldUseNilForComment];
-}
-
-- (BOOL)shouldUseSnippetForComment {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:QLShouldUseSnippetForComment];
-}
-
-- (void)setShouldUseSnippetForComment:(BOOL)shouldUseSnippetForComment {
-    [[NSUserDefaults standardUserDefaults] setBool:shouldUseSnippetForComment forKey:QLShouldUseSnippetForComment];
-}
-
-- (BOOL)shouldUseSwiftSyntax {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:QLShouldUseSwiftSyntax];
-}
-
-- (void)setShouldUseSwiftSyntax:(BOOL)shouldUseSwiftSyntax {
-    [[NSUserDefaults standardUserDefaults] setBool:shouldUseSwiftSyntax forKey:QLShouldUseSwiftSyntax];
-}
 @end
