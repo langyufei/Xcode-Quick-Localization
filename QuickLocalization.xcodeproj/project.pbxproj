@@ -19,7 +19,7 @@
 		09A343C4174068E200A713EE /* RCXcode.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RCXcode.h; sourceTree = "<group>"; };
 		09A343C5174068E200A713EE /* RCXcode.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = RCXcode.m; sourceTree = "<group>"; };
 		09EC581717E3B6E1002261C4 /* icon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = icon.icns; sourceTree = "<group>"; };
-		09F65632174041010000486B /* QuickLocalization.xcplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = QuickLocalization.xcplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		09F65632174041010000486B /* Convert To Dot Notation.xcplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Convert To Dot Notation.xcplugin"; sourceTree = BUILT_PRODUCTS_DIR; };
 		09F65635174041010000486B /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		09F65637174041010000486B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		09F6563B174041010000486B /* QuickLocalization-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "QuickLocalization-Info.plist"; sourceTree = "<group>"; };
@@ -54,7 +54,7 @@
 		09F65633174041010000486B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				09F65632174041010000486B /* QuickLocalization.xcplugin */,
+				09F65632174041010000486B /* Convert To Dot Notation.xcplugin */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -94,9 +94,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		09F65631174041010000486B /* QuickLocalization */ = {
+		09F65631174041010000486B /* Convert To Dot Notation */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 09F65645174041010000486B /* Build configuration list for PBXNativeTarget "QuickLocalization" */;
+			buildConfigurationList = 09F65645174041010000486B /* Build configuration list for PBXNativeTarget "Convert To Dot Notation" */;
 			buildPhases = (
 				09F6562E174041010000486B /* Sources */,
 				09F6562F174041010000486B /* Frameworks */,
@@ -106,9 +106,9 @@
 			);
 			dependencies = (
 			);
-			name = QuickLocalization;
+			name = "Convert To Dot Notation";
 			productName = QuickLocalization;
-			productReference = 09F65632174041010000486B /* QuickLocalization.xcplugin */;
+			productReference = 09F65632174041010000486B /* Convert To Dot Notation.xcplugin */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -132,7 +132,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				09F65631174041010000486B /* QuickLocalization */,
+				09F65631174041010000486B /* Convert To Dot Notation */,
 			);
 		};
 /* End PBXProject section */
@@ -276,7 +276,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		09F65645174041010000486B /* Build configuration list for PBXNativeTarget "QuickLocalization" */ = {
+		09F65645174041010000486B /* Build configuration list for PBXNativeTarget "Convert To Dot Notation" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				09F65646174041010000486B /* Debug */,
