@@ -68,7 +68,7 @@ static id sharedPlugin = nil;
         NSString *line = [textView.textStorage.string substringWithRange:lineRange];
 
         NSString *dotNotationRegex = @".*[.].*[ ]{0,}=[ ]{0,}.*[ ]{0,}\\;";
-        NSString *messageNotationRegex = @"\\[[ ]{0,}(.*)\\sset(.*)[ ]{0,}\\:[ ]{0,}(.*)\\]\\;";
+        NSString *messageNotationRegex = @"\\[[ ]{0,}(.*)\\sset(.*?)[ ]{0,}\\:[ ]{0,}(.*)\\]\\;";
         
         NSRegularExpression *dotNotationRex = [[NSRegularExpression alloc] initWithPattern:dotNotationRegex options:NSRegularExpressionCaseInsensitive error:nil];
         NSArray *dotNotationMatches = [dotNotationRex matchesInString:line options:0 range:NSMakeRange(0, line.length)];
