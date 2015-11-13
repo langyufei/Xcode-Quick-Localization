@@ -10,7 +10,7 @@
 #import "RCXcode.h"
 
 @interface QuickLocalization ()
-
+@property (strong, nonatomic) NSDateFormatter *dateFormatter;
 @end
 
 @implementation QuickLocalization
@@ -21,7 +21,7 @@ static id sharedPlugin = nil;
 + (void)pluginDidLoad:(NSBundle *)plugin
 {
     static dispatch_once_t onceToken;
-
+    
     dispatch_once(&onceToken, ^{
         sharedPlugin = [[self alloc] init];
     });
@@ -34,45 +34,74 @@ static id sharedPlugin = nil;
         [[NSOperationQueue mainQueue] addOperationWithBlock:^{
             
             NSMenuItem *viewMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
-
+            
             if (viewMenuItem)
             {
                 [[viewMenuItem submenu] addItem:[NSMenuItem separatorItem]];
-
+                
+                // Convert To Dot Notation
                 NSMenuItem *dotNotationMenuItem = [[NSMenuItem alloc] initWithTitle:@"Convert To Dot Notation" action:@selector(convertToDotNotation) keyEquivalent:@"x"];
                 [dotNotationMenuItem setKeyEquivalentModifierMask:NSShiftKeyMask | NSCommandKeyMask];
                 [dotNotationMenuItem setTarget:self];
                 [[viewMenuItem submenu] addItem:dotNotationMenuItem];
+                
+                // Add a comment with name and date
+                NSMenuItem *commentMenuItem = [[NSMenuItem alloc] initWithTitle:@"Add a comment" action:@selector(addComment) keyEquivalent:@"c"];
+                [commentMenuItem setKeyEquivalentModifierMask:NSShiftKeyMask | NSCommandKeyMask];
+                [commentMenuItem setTarget:self];
+                [[viewMenuItem submenu] addItem:commentMenuItem];
+                
+                // NSString *fmt = [NSDateFormatter dateFormatFromTemplate:@"dMMMHm" options:0 locale:[NSLocale currentLocale]];
+                if (!self.dateFormatter) {
+                    self.dateFormatter = [[NSDateFormatter alloc] init];
+                }
+                self.dateFormatter.dateFormat = @"MMM d<#@H:mm#>";
             }
         }];
     }
-
+    
     return self;
 }
 
-// Sample Action, for menu item:
+- (void)addComment
+{
+    IDESourceCodeDocument *document = [RCXcode currentSourceCodeDocument];
+    NSTextView *textView = [RCXcode currentSourceCodeTextView];
+    
+    if (!document || !textView) {
+        return;
+    }
+    
+    NSString *dateString = [self.dateFormatter stringFromDate:[NSDate date]];
+    NSString *comment = [NSString stringWithFormat:@" // <#comment#> [yufei %@]", dateString];
+    
+    NSInteger insertionPoint = [[[textView selectedRanges] objectAtIndex:0] rangeValue].location;
+    [textView.textStorage insertAttributedString:[[NSAttributedString alloc] initWithString:comment] atIndex:insertionPoint];
+    [textView setSelectedRange:NSMakeRange(insertionPoint + 4, @"<#comment#>".length)];
+}
+
 - (void)convertToDotNotation
 {
     IDESourceCodeDocument *document = [RCXcode currentSourceCodeDocument];
     NSTextView *textView = [RCXcode currentSourceCodeTextView];
-
+    
     if (!document || !textView) {
         return;
     }
-
+    
     NSArray *selectedRanges = [textView selectedRanges];
     if (selectedRanges.count > 0)
     {
         NSRange range = [[selectedRanges firstObject] rangeValue];
         NSRange lineRange = [textView.textStorage.string lineRangeForRange:range];
         NSString *line = [textView.textStorage.string substringWithRange:lineRange];
-
+        
         NSString *dotNotationRegex = @".*[.].*[ ]{0,}=[ ]{0,}.*[ ]{0,}\\;";
         NSString *messageNotationRegex = @"\\[[ ]{0,}(.*)\\sset(.*?)[ ]{0,}\\:[ ]{0,}(.*)\\]\\;";
         
         NSRegularExpression *dotNotationRex = [[NSRegularExpression alloc] initWithPattern:dotNotationRegex options:NSRegularExpressionCaseInsensitive error:nil];
         NSArray *dotNotationMatches = [dotNotationRex matchesInString:line options:0 range:NSMakeRange(0, line.length)];
-
+        
         NSRegularExpression *MsgNotationRegex = [[NSRegularExpression alloc] initWithPattern:messageNotationRegex options:NSRegularExpressionCaseInsensitive error:nil];
         NSArray *msgNotationMatches = [MsgNotationRegex matchesInString:line options:0 range:NSMakeRange(0, line.length)];
         
@@ -112,13 +141,13 @@ static id sharedPlugin = nil;
     {
         NSTextCheckingResult *result = [ranges objectAtIndex:i];
         NSRange skippedRange = result.range;
-
+        
         if (skippedRange.location <= range.location && skippedRange.location + skippedRange.length > range.location + range.length)
         {
             return YES;
         }
     }
-
+    
     return NO;
 }
 
