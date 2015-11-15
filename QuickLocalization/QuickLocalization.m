@@ -17,7 +17,6 @@
 
 static id sharedPlugin = nil;
 
-
 + (void)pluginDidLoad:(NSBundle *)plugin
 {
     static dispatch_once_t onceToken;
@@ -33,23 +32,23 @@ static id sharedPlugin = nil;
     {
         [[NSOperationQueue mainQueue] addOperationWithBlock:^{
             
-            NSMenuItem *viewMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
+            NSMenuItem *editMenuItem = [[NSApp mainMenu] itemWithTitle:@"Edit"];
             
-            if (viewMenuItem)
+            if (editMenuItem)
             {
-                [[viewMenuItem submenu] addItem:[NSMenuItem separatorItem]];
+                [[editMenuItem submenu] addItem:[NSMenuItem separatorItem]];
                 
                 // Convert To Dot Notation
                 NSMenuItem *dotNotationMenuItem = [[NSMenuItem alloc] initWithTitle:@"Convert To Dot Notation" action:@selector(convertToDotNotation) keyEquivalent:@"x"];
                 [dotNotationMenuItem setKeyEquivalentModifierMask:NSShiftKeyMask | NSCommandKeyMask];
                 [dotNotationMenuItem setTarget:self];
-                [[viewMenuItem submenu] addItem:dotNotationMenuItem];
+                [[editMenuItem submenu] addItem:dotNotationMenuItem];
                 
                 // Add a comment with name and date
                 NSMenuItem *commentMenuItem = [[NSMenuItem alloc] initWithTitle:@"Add a comment" action:@selector(addComment) keyEquivalent:@"c"];
                 [commentMenuItem setKeyEquivalentModifierMask:NSShiftKeyMask | NSCommandKeyMask];
                 [commentMenuItem setTarget:self];
-                [[viewMenuItem submenu] addItem:commentMenuItem];
+                [[editMenuItem submenu] addItem:commentMenuItem];
                 
                 // NSString *fmt = [NSDateFormatter dateFormatFromTemplate:@"dMMMHm" options:0 locale:[NSLocale currentLocale]];
                 if (!self.dateFormatter) {
@@ -73,11 +72,52 @@ static id sharedPlugin = nil;
     }
     
     NSString *dateString = [self.dateFormatter stringFromDate:[NSDate date]];
-    NSString *comment = [NSString stringWithFormat:@" // <#comment#> [yufei %@]", dateString];
+    NSString *comment = [NSString stringWithFormat:@"// <#comment#> [yufei %@]", dateString];
     
-    NSInteger insertionPoint = [[[textView selectedRanges] objectAtIndex:0] rangeValue].location;
-    [textView.textStorage insertAttributedString:[[NSAttributedString alloc] initWithString:comment] atIndex:insertionPoint];
-    [textView setSelectedRange:NSMakeRange(insertionPoint + 4, @"<#comment#>".length)];
+    NSRange selectedRange = ((NSValue *)[[textView selectedRanges] firstObject]).rangeValue;
+    NSUInteger insertionPoint = selectedRange.location;
+    NSUInteger selectedTextLenght = selectedRange.length;
+    
+    if (selectedTextLenght > 0) // have text selected
+    {
+        NSRange lineRange = [textView.textStorage.string lineRangeForRange:selectedRange];
+        NSString *stringAtLines = [textView.textStorage.string substringWithRange:lineRange];
+        
+        NSMutableCharacterSet *noneWhitespaceCharSet = [NSMutableCharacterSet whitespaceCharacterSet];
+        [noneWhitespaceCharSet addCharactersInRange:NSMakeRange((unsigned int)'\t', 1)];
+        [noneWhitespaceCharSet invert];
+        
+        NSRange firstCharRange = [stringAtLines rangeOfCharacterFromSet:noneWhitespaceCharSet options:0];
+        if (firstCharRange.location != NSNotFound)
+        {
+            NSUInteger numberOfWhitespace = 0;
+            NSString *stringBefore1stLetter = [stringAtLines substringToIndex:firstCharRange.location];
+            for (NSUInteger idx = 0; idx < stringBefore1stLetter.length; idx++) {
+                numberOfWhitespace += ([stringBefore1stLetter characterAtIndex:idx] == '\t') ? 4 : 1; // deal with 'tab' symbol
+            }
+            
+            NSMutableString *whiteSpaces = [NSMutableString string];
+            for (NSUInteger i = 0; i < numberOfWhitespace; i++) {
+                [whiteSpaces appendString:@" "];
+            }
+            NSMutableString *newString = [[NSMutableString alloc] initWithFormat:@"%@/* <#comment#> [yufei %@]\n%@ *\n%@%@ */\n", whiteSpaces, dateString, whiteSpaces, stringAtLines, whiteSpaces];
+            if ([textView shouldChangeTextInRange:lineRange replacementString:newString])
+            {
+                [textView.textStorage replaceCharactersInRange:lineRange withAttributedString:[[NSAttributedString alloc] initWithString:newString]];
+                [textView setSelectedRange:NSMakeRange(lineRange.location + whiteSpaces.length + 3, @"<#comment#>".length)];
+                [textView didChangeText];
+            }
+        }
+    }
+    else
+    {
+        if ([textView shouldChangeTextInRange:NSMakeRange(insertionPoint, 0) replacementString:comment])
+        {
+            [textView.textStorage insertAttributedString:[[NSAttributedString alloc] initWithString:comment] atIndex:insertionPoint];
+            [textView setSelectedRange:NSMakeRange(insertionPoint + 3, @"<#comment#>".length)];
+            [textView didChangeText];
+        }
+    }
 }
 
 - (void)convertToDotNotation
@@ -92,6 +132,13 @@ static id sharedPlugin = nil;
     NSArray *selectedRanges = [textView selectedRanges];
     if (selectedRanges.count > 0)
     {
+        /* this is a comment [yufei]
+         *
+        NSRange range = [[selectedRanges firstObject] rangeValue];
+        NSRange lineRange = [textView.textStorage.string lineRangeForRange:range];
+        NSString *line = [textView.textStorage.string substringWithRange:lineRange];
+         */
+        
         NSRange range = [[selectedRanges firstObject] rangeValue];
         NSRange lineRange = [textView.textStorage.string lineRangeForRange:range];
         NSString *line = [textView.textStorage.string substringWithRange:lineRange];
