@@ -134,9 +134,9 @@ static id sharedPlugin = nil;
     {
         /* this is a comment [yufei]
          *
-        NSRange range = [[selectedRanges firstObject] rangeValue];
-        NSRange lineRange = [textView.textStorage.string lineRangeForRange:range];
-        NSString *line = [textView.textStorage.string substringWithRange:lineRange];
+         NSRange range = [[selectedRanges firstObject] rangeValue];
+         NSRange lineRange = [textView.textStorage.string lineRangeForRange:range];
+         NSString *line = [textView.textStorage.string substringWithRange:lineRange];
          */
         
         NSRange range = [[selectedRanges firstObject] rangeValue];
